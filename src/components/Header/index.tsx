@@ -3,10 +3,10 @@ import styles from './header.module.scss';
 
 export default function Header(): JSX.Element {
   return (
-    <header className={styles.container}>
+    <header className={styles.postHeader}>
       <Link href="/">
         <a>
-          <img src="/Logo.svg" alt="Logo" />
+          <img src="/Logo.svg" alt="logo" className={styles.logo} />
         </a>
       </Link>
     </header>

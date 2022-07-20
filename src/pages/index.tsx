@@ -1,14 +1,14 @@
 import { GetStaticProps } from 'next';
-import { getPrismicClient } from '../services/prismic';
-import Header from '../components/Header';
-import Prismic from '@prismicio/client';
-
 import Link from 'next/link';
+import Head from 'next/head';
 import { FiCalendar, FiUser } from 'react-icons/fi';
-
-import { JSXElementConstructor, useState } from 'react';
+import Prismic from '@prismicio/client';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import ptBR from 'date-fns/locale/pt-BR';
+import { useState } from 'react';
+import Header from '../components/Header';
+
+import { getPrismicClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -36,6 +36,9 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
   const formattedPost = postsPagination.results.map(post => {
     return {
       ...post,
+      data: {
+        ...post.data,
+      },
       first_publication_date: format(
         new Date(post.first_publication_date),
         'dd MMM yyyy',
@@ -47,9 +50,47 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
   });
 
   const [posts, setPosts] = useState<Post[]>(formattedPost);
+  const [nextPage, setNextPage] = useState(postsPagination.next_page);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  async function handleNextPage(): Promise<void> {
+    if (currentPage !== 1 && nextPage === null) {
+      return;
+    }
+
+    const postsResults = await fetch(`${nextPage}`).then(response =>
+      response.json()
+    );
+    setNextPage(postsResults.next_page);
+    setCurrentPage(postsResults.page);
+
+    const newPosts = postsResults.results.map((post: Post) => {
+      return {
+        uid: post.uid,
+        first_publication_date: format(
+          new Date(post.first_publication_date),
+          'dd MMM yyyy',
+          {
+            locale: ptBR,
+          }
+        ),
+        data: {
+          title: post.data.title,
+          subtitle: post.data.subtitle,
+          author: post.data.author,
+        },
+      };
+    });
+
+    setPosts([...posts, ...newPosts]);
+  }
 
   return (
     <>
+      <Head>
+        <title>Home | spacetraveling</title>
+      </Head>
+
       <main className={commonStyles.container}>
         <Header />
         <div className={styles.posts}>
@@ -72,9 +113,15 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
             </Link>
           ))}
 
-          <button type="button" className={styles.button}>
-            Carregar mais posts
-          </button>
+          {nextPage && (
+            <button
+              type="button"
+              onClick={handleNextPage}
+              className={styles.button}
+            >
+              Carregar mais posts
+            </button>
+          )}
         </div>
       </main>
     </>
